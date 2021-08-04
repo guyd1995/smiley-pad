@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SmileyPad</string>
+    <string name="display_name_english_keyboard_ime">SmileyPad English Keyboard</string>
 </resources>
