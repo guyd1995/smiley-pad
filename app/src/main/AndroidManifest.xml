@@ -7,6 +7,13 @@
                  android:roundIcon="@mipmap/ic_launcher_round"
                  android:supportsRtl="true"
                  android:theme="@style/AppTheme">
+        <activity android:name="MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <!-- Declares the input method service -->
         <service android:name="com.dar.guy.smileypad.SmileyPadImeService"
                  android:label="SmileyPad"
@@ -16,6 +23,9 @@
             </intent-filter>
             <meta-data android:name="android.view.im"
                        android:resource="@xml/method" />
+        </service>
+        <service android:name="SmileyPadKeyboard">
+
         </service>
     </application>
 </manifest>
