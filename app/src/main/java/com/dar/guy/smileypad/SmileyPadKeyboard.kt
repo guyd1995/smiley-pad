@@ -6,20 +6,23 @@ import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
 import android.text.TextUtils
 import android.view.KeyEvent
+import kotlinx.android.synthetic.main.keyboard_view.view.*
 
 
 open class SmileyPadKeyboard : InputMethodService(), KeyboardView.OnKeyboardActionListener{
-    private var keyboardView: KeyboardView? = null
+    private var keyboardLayoutView: View? = null
+    private var mainKeyboardView: KeyboardView? = null
     private var keyboard: Keyboard? = null
 
     private var caps = false
 
     override fun onCreateInputView(): View {
-        keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
+        keyboardLayoutView = layoutInflater.inflate(R.layout.keyboard_view, null)
         keyboard = Keyboard(this, R.xml.keys_layout)
-        keyboardView!!.keyboard = keyboard
-        keyboardView!!.setOnKeyboardActionListener(this)
-        return keyboardView!!
+        mainKeyboardView =  keyboardLayoutView!!.keyboard_view
+        mainKeyboardView!!.keyboard = keyboard
+        mainKeyboardView!!.setOnKeyboardActionListener(this)
+        return keyboardLayoutView!!
     }
 
 
@@ -45,12 +48,12 @@ open class SmileyPadKeyboard : InputMethodService(), KeyboardView.OnKeyboardActi
                     }
                     caps = !caps
                     keyboard!!.setShifted(caps)
-                    keyboardView!!.invalidateAllKeys()
+                    mainKeyboardView!!.invalidateAllKeys()
                 }
                 Keyboard.KEYCODE_SHIFT -> {
                     caps = !caps
                     keyboard!!.setShifted(caps)
-                    keyboardView!!.invalidateAllKeys()
+                    mainKeyboardView!!.invalidateAllKeys()
                 }
                 Keyboard.KEYCODE_DONE -> inputConnection.sendKeyEvent(
                     KeyEvent(

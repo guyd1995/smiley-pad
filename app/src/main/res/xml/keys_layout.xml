@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-    <Button android:text=":)"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-    />
-    <Keyboard
-              android:keyWidth="10%p"
-              android:horizontalGap="3px"
-              android:verticalGap="3px"
-              android:keyHeight="60dp"
-              android:keyTextColor="@color/colorAccent"
-              android:keyBackground="@color/colorPrimaryDark">
+
+<Keyboard
+        android:keyWidth="10%p"
+        android:horizontalGap="3px"
+        android:verticalGap="3px"
+        android:keyHeight="60dp"
+        android:keyTextColor="@color/colorAccent"
+        android:keyBackground="@color/colorPrimaryDark" xmlns:android="http://schemas.android.com/apk/res/android">
 
         <Row>
             <Key android:codes="49" android:keyLabel="1" android:keyEdgeFlags="left"/>
@@ -74,4 +66,3 @@
                  android:keyLabel="DONE" android:keyWidth="20%p" android:keyEdgeFlags="right"/>
         </Row>
     </Keyboard>
-</LinearLayout>
