@@ -1,3 +1,5 @@
+models/FEC_dataset
+models/experiments.ipynb
 **/*.png
 *.iml
 .gradle
