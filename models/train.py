@@ -14,6 +14,7 @@ from PIL import Image
 import importlib
 facenet_pytorch = importlib.import_module('facenet-pytorch')
 InceptionResnetV1 = facenet_pytorch.models.inception_resnet_v1.InceptionResnetV1
+from itertools import cycle
 
 
 def intermediate_layer_getter(model, layer_name, register_inplace=False):
@@ -40,14 +41,28 @@ def intermediate_layer_getter(model, layer_name, register_inplace=False):
 
 
 class FecDataset(Dataset):
-    def __init__(self):
-        pass
-    
+    dims = (224, 224)
+    def __init__(self, csv_path):
+        self.data = pd.read_csv(csv_path)
+        
     def __getitem__(self, idx):
-        pass
+        data = self.data.iloc[idx]
+        img0, img1, img2 = map(self._preprocess_img, (data['img0'], data['img1'], data['img2']))
+        inputs = torch.stack([img0, img1, img2], dim=0)
+        target = data['target']
+        triplet_type = data['triplet_type']
+        return inputs, torch.LongTensor([target]), torch.LongTensor([triplet_type])
+        
+    def _preprocess_img(self, img_path):
+        img = Image.open(img_path)
+        img = img.resize(self.dims)
+        data = np.array(img) / 255.
+        data = torch.Tensor(data)
+        data = data.transpose(1, 2, 0)
+        return data
     
     def __len__(self):
-        pass
+        return len(self.data)
 
 
 class FecNet(nn.Module):
@@ -77,7 +92,8 @@ class FecNet(nn.Module):
     
 
 def triplet_loss(outputs, target, delta):
-    indices = [((0, 1), (1, 2), (0, 2)), ((1, 2), (0, 1), (0, 2)), ((0, 2), (0, 1), (1, 2))]
+    # TODO: batch this
+    indices = [((1, 2), (0, 1), (0, 2)), ((0, 2), (0, 1), (1, 2)), ((0, 1), (1, 2), (0, 2))]
     good, bad1, bad2 = map(lambda idx: F.sum((outputs[idx[1]]-outputs[idx[0]])**2, dim=-1), indices[target])
     return F.relu(delta + good - bad1) + F.relu(delta + good - bad2)
 
@@ -85,14 +101,20 @@ def train():
     train_ds = FecDataset()
     model = FecNet()
 
-    lr = 1e-3
-    batch_size = 8
+    lr = 5e-4
+    num_steps = 50000
+    batch_size = 30
+    delta = .1
     train_loader = DataLoader(train_ds, batch_size=8)
     optimizer = Adam(model.parameters(), lr=lr)
-    for inputs, target in tqdm(train_loader):
+    for inputs, target, triplet_type in tqdm(cycle(train_loader), total=num_steps):
         optimizer.zero_grad()
-        *outputs = map(model, inputs)
-        n_classes = 1
-        loss = triplet_loss(outputs, target, delta * n_classes)
+        inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
+        *outputs = map(model, (inp1, inp2, inp3))
+        loss = triplet_loss(outputs, target, delta * (1 + triplet_type))
         loss.backward()
         optimizer.step()
+
+        
+if __name__ == "__main__":
+    train()

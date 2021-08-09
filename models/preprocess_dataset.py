@@ -10,7 +10,7 @@ from collections import Counter
 from PIL import Image
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from requests_futures.sessions import FuturesSession
-
+from argparse import ArgumentParser
 
 original_csv_header = [
           'url0', 'left0', 'right0', 'top0', 'bottom0', 
@@ -26,7 +26,7 @@ original_csv_header = [
           ]
 
 
-def _get_fec_urls(folder='FEC_dataset', force_https=True):
+def _get_fec_urls(folder='FEC_dataset', force_https=False):
     csv_folder = folder + "/FEC_dataset"
     train_path = csv_folder + "/faceexp-comparison-data-train-public.csv"
     test_path = csv_folder + "/faceexp-comparison-data-test-public.csv"
@@ -72,13 +72,13 @@ def _get_fec_urls(folder='FEC_dataset', force_https=True):
     return train_csv, test_csv, urls_df
 
 
-def _fetch_fec_imgs(urls_df, max_imgs=None, folder="FEC_dataset"):
+def _fetch_fec_imgs(urls_df, max_imgs=None, folder="FEC_dataset", start_pos=0):
     all_urls = list(urls_df.url)
     max_imgs = min(len(all_urls), max_imgs) if max_imgs is not None else len(all_urls)
-    randomized_urls = np.random.permutation(all_urls)[:max_imgs]
+    randomized_urls = np.random.permutation(all_urls)[start_pos:start_pos + max_imgs]
     
     session = FuturesSession()
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_url = {session.get(url): url for url in randomized_urls}
         pbar = tqdm(as_completed(future_to_url), total=len(future_to_url.keys()))
         for future in pbar:
@@ -94,26 +94,25 @@ def _fetch_fec_imgs(urls_df, max_imgs=None, folder="FEC_dataset"):
 
             with open(img_path, 'wb') as f:
                 f.write(resp.content)
-
-            with open(img_path, 'rb') as f_img:
-                try:
+            try:
+                with open(img_path, 'rb') as f_img:
                     whole_img = Image.open(f_img)
-                except:
-                    print("img opening error")
-                    whole_img = None
-                if whole_img is not None:
-                    w, h = whole_img.width, whole_img.height
-                    for rect_idx, rect in enumerate(urls_df.iloc[real_idx].rect):
-                        left, right, top, bottom = np.floor(np.array(rect) * np.array([w, w, h, h])).astype(int)
-                        try:
-                            whole_img.crop((left, top, right, bottom)).save(f'{img_folder}/{real_idx}_{rect_idx}.jpg')
-                        except:
-                            print("cropping error")
-            os.remove(img_path)        
+                    if whole_img is not None:
+                        w, h = whole_img.width, whole_img.height
+                        for rect_idx, rect in enumerate(urls_df.iloc[real_idx].rect):
+                            left, right, top, bottom = np.floor(np.array(rect) * np.array([w, w, h, h])).astype(int)
+                            try:
+                                whole_img.crop((left, top, right, bottom)).save(f'{img_folder}/{real_idx}_{rect_idx}.jpg')
+                            except:
+                                print("cropping error")
+            except:
+                print("img opening/cropping error")
+
+            os.remove(img_path)
 
 
 def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
-    all_imgs = list(glob(f'{folder}/images/*.jpg'))
+    all_imgs = list(map(os.path.normpath, glob(f'{folder}/images/*.jpg')))
     all_urls = list(urls_df.orig_url)
     all_urls = {all_urls[i]: i for i in range(len(all_urls))}
     for name, df in [('train', train_csv), ('test', test_csv)]:
@@ -123,7 +122,7 @@ def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
             for i in range(3):
                 idx1 = all_urls[row[f'url{i}']]
                 idx2 = urls_df.iloc[idx1].rect.index((row[f'left{i}'], row[f'right{i}'], row[f'top{i}'], row[f'bottom{i}']))
-                img_path = f"{folder}/images/{idx1}_{idx2}.jpg"
+                img_path = os.path.normpath(f"{folder}/images/{idx1}_{idx2}.jpg")
                 new_df[f'img{i}'].append(img_path if img_path in all_imgs else None)
             
             cntr = Counter([row['annot0'], row['annot1'], row['annot2'], row['annot3'], row['annot4'], row['annot5']])
@@ -137,9 +136,22 @@ def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--max-imgs", default=None, type=int)
+    parser.add_argument("--seed", default=None, type=int)
+    parser.add_argument("--start", default=0, type=int)
+    args = parser.parse_args()
+    max_imgs = args.max_imgs
+    seed = args.seed
+    start_pos = args.start
+    
+    if seed is not None:
+        print(f"setting seed to {seed}")
+        np.random.seed(seed)
+    
     print("organize urls..")
     train_csv, test_csv, urls_df = _get_fec_urls()
     print("fetch images..")
-    _fetch_fec_imgs(urls_df)
+    _fetch_fec_imgs(urls_df, max_imgs=max_imgs, start_pos=start_pos)
     print("process csvs..")
     _normalize_csvs(train_csv, test_csv, urls_df)
