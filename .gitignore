@@ -13,3 +13,4 @@ models/experiments.ipynb
 /captures
 .externalNativeBuild
 gradle/wrapper/gradle-wrapper.jar
+models/.ipynb_checkpoints/experiments-checkpoint.ipynb
