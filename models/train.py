@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import torchvision
 from torchvision.models import DenseNet
 from torchvision.models.densenet import _DenseBlock
@@ -12,9 +13,9 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import importlib
+from itertools import cycle
 facenet_pytorch = importlib.import_module('facenet-pytorch')
 InceptionResnetV1 = facenet_pytorch.models.inception_resnet_v1.InceptionResnetV1
-from itertools import cycle
 
 
 def intermediate_layer_getter(model, layer_name, register_inplace=False):
@@ -116,22 +117,23 @@ def triplet_loss(outputs, target, delta):
     return F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e1)) + F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e2))
 
 
-def train():
+def train(batch_size, num_steps, lr, device):
     print("load datasets and model..")
     train_ds = FecDataset("FEC_dataset/processed_train.csv")
     test_df = FecDataset("FEC_dataset/processed_test.csv")
-    model = FecNet()
+    model = FecNet().to(device)
 
     print("start training")
-    lr = 1e-3
-    num_steps = 375000
-    batch_size = 4
     delta = .1
     train_loader = DataLoader(train_ds, batch_size=batch_size)
     optimizer = Adam(model.parameters(), lr=lr)
     running_loss = 0
     pbar = tqdm(cycle(train_loader), total=num_steps)
-    for inputs, target, triplet_type in pbar:
+    for i, (inputs, target, triplet_type) in enumerate(pbar):
+        inputs = inputs.to(device)
+        target = target.to(device)
+        triplet_type = triplet_type.to(device)
+        
         optimizer.zero_grad()
         inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
         outputs = list(map(lambda x: model(x.squeeze(1)), (inp1, inp2, inp3)))
@@ -139,7 +141,15 @@ def train():
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        pbar.set_postfix_str(f"Loss: {running_loss:.2f}")
+        pbar.set_postfix_str(f"Loss: {running_loss/(1+i):.2f}")
+
 
 if __name__ == "__main__":
-    train()
+    parser = ArgumentParser()
+    parser.add_argument("--batch-size", default=30, type=int)
+    parser.add_argument("--lr", default=4e-5, type=float)
+    parser.add_argument("--num-steps", default=50000, type=int)
+    args = parser.parse_args()
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    train(batch_size=args.batch_size, num_steps=args.num_steps, lr=args.lr, device=device)
