@@ -11,6 +11,7 @@ from PIL import Image
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from requests_futures.sessions import FuturesSession
 from argparse import ArgumentParser
+from pathlib import Path
 
 original_csv_header = [
           'url0', 'left0', 'right0', 'top0', 'bottom0', 
@@ -123,7 +124,7 @@ def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
             for i in range(3):
                 idx1 = all_urls[row[f'url{i}']]
                 idx2 = urls_df.iloc[idx1].rect.index((row[f'left{i}'], row[f'right{i}'], row[f'top{i}'], row[f'bottom{i}']))
-                img_path = os.path.normpath(f"{folder}/images/{idx1}_{idx2}.jpg")
+                img_path = Path(os.path.normpath(f"{folder}/images/{idx1}_{idx2}.jpg")).as_posix()
                 new_df[f'img{i}'].append(img_path if img_path in all_imgs else None)
             
             cntr = Counter([row['annot0'], row['annot1'], row['annot2'], row['annot3'], row['annot4'], row['annot5']])

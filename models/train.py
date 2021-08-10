@@ -55,7 +55,7 @@ class FecDataset(Dataset):
         return inputs, torch.LongTensor([target]), torch.LongTensor([triplet_type])
         
     def _preprocess_img(self, img_path):
-        img = Image.open(img_path).convert('RGB')
+        img = Image.open(Path(img_path).as_posix()).convert('RGB')
         img = img.resize(self.dims)
         data = np.array(img) / 255.
         data = torch.Tensor(data)
