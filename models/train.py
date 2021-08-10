@@ -79,7 +79,8 @@ class FecNet(nn.Module):
         self.fc2 = nn.Linear(512, 16)
     
     def forward(self, x):
-        x = self.backbone(x)
+        with torch.no_grad():
+            x = self.backbone(x).detach()
         x = self.conv(x)
         x = F.relu(x)
         x = self.dense_block(x)
@@ -132,6 +133,8 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
     running_loss = 0
     pbar = tqdm(cycle(train_loader), total=num_steps)
     for i, (inputs, target, triplet_type) in enumerate(pbar):
+        if i >= num_steps:
+            break
         inputs = inputs.to(device)
         target = target.to(device)
         triplet_type = triplet_type.to(device)
@@ -148,6 +151,7 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
         if (1 + i) % checkpoint_freq == 0:
             torch.save({"num_steps": num_steps, "state_dict": model.state_dict(), "loss": avg_loss},
                       f"{checkpoint_folder}/model.pt")
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
