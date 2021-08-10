@@ -54,11 +54,11 @@ class FecDataset(Dataset):
         return inputs, torch.LongTensor([target]), torch.LongTensor([triplet_type])
         
     def _preprocess_img(self, img_path):
-        img = Image.open(img_path)
+        img = Image.open(img_path).convert('RGB')
         img = img.resize(self.dims)
         data = np.array(img) / 255.
         data = torch.Tensor(data)
-        data = data.transpose(1, 2, 0)
+        data = data.permute(2, 0, 1)
         return data
     
     def __len__(self):
@@ -85,36 +85,61 @@ class FecNet(nn.Module):
         x = self.avg_pool(x)
         x = self.flatten(x)
         x = self.fc1(x)
-        x = self.relu6(x)
+        x = F.relu6(x)
         x = self.fc2(x)
         x = x / F.normalize(x, dim=-1)
         return x
+
+    
+def batched_index_select(inputs, indices, dim):
+    """
+    inputs: B x ...
+    indices: B (long)
+    """
+    b, *_ = inputs.shape
+    assert inputs.shape[0] == indices.shape[0]
+    n = len(inputs.shape)
+    unsqueezed_shape = [b] + [1] * (n-1)
+    expand_shape = list(inputs.shape)
+    expand_shape[dim] = 1
+    return inputs.gather(dim=dim, index=indices.reshape(unsqueezed_shape).expand(*expand_shape)).squeeze(dim)
     
 
 def triplet_loss(outputs, target, delta):
-    # TODO: batch this
-    indices = [((1, 2), (0, 1), (0, 2)), ((0, 2), (0, 1), (1, 2)), ((0, 1), (1, 2), (0, 2))]
-    good, bad1, bad2 = map(lambda idx: F.sum((outputs[idx[1]]-outputs[idx[0]])**2, dim=-1), indices[target])
-    return F.relu(delta + good - bad1) + F.relu(delta + good - bad2)
+    def l2_squared(x): return torch.sum(x**2, dim=-1)
+    
+    outputs = torch.stack(outputs, dim=1)
+    e1 = batched_index_select(outputs, (1+target)%3, dim=1)
+    e2 = batched_index_select(outputs, (2+target)%3, dim=1)
+    e3 = batched_index_select(outputs, target, dim=1)
+
+    return F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e1)) + F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e2))
+
 
 def train():
-    train_ds = FecDataset()
+    print("load datasets and model..")
+    train_ds = FecDataset("FEC_dataset/processed_train.csv")
+    test_df = FecDataset("FEC_dataset/processed_test.csv")
     model = FecNet()
 
-    lr = 5e-4
-    num_steps = 50000
-    batch_size = 30
+    print("start training")
+    lr = 1e-3
+    num_steps = 375000
+    batch_size = 4
     delta = .1
-    train_loader = DataLoader(train_ds, batch_size=8)
+    train_loader = DataLoader(train_ds, batch_size=batch_size)
     optimizer = Adam(model.parameters(), lr=lr)
-    for inputs, target, triplet_type in tqdm(cycle(train_loader), total=num_steps):
+    running_loss = 0
+    pbar = tqdm(cycle(train_loader), total=num_steps)
+    for inputs, target, triplet_type in pbar:
         optimizer.zero_grad()
         inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
-        *outputs = map(model, (inp1, inp2, inp3))
-        loss = triplet_loss(outputs, target, delta * (1 + triplet_type))
+        outputs = list(map(lambda x: model(x.squeeze(1)), (inp1, inp2, inp3)))
+        loss = triplet_loss(outputs, target, delta * (1 + triplet_type)).mean()
         loss.backward()
         optimizer.step()
+        running_loss += loss.item()
+        pbar.set_postfix_str(f"Loss: {running_loss:.2f}")
 
-        
 if __name__ == "__main__":
     train()

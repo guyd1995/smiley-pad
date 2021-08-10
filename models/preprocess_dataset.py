@@ -72,18 +72,19 @@ def _get_fec_urls(folder='FEC_dataset', force_https=False):
     return train_csv, test_csv, urls_df
 
 
-def _fetch_fec_imgs(urls_df, max_imgs=None, folder="FEC_dataset", start_pos=0):
+def _fetch_fec_imgs(urls_df, max_imgs=None, timeout=None, folder="FEC_dataset", start_pos=0):
     all_urls = list(urls_df.url)
-    max_imgs = min(len(all_urls), max_imgs) if max_imgs is not None else len(all_urls)
+    max_imgs = min(len(all_urls)-start_pos, max_imgs) if max_imgs is not None else len(all_urls)-start_pos
+    assert max_imgs >= 0
     randomized_urls = np.random.permutation(all_urls)[start_pos:start_pos + max_imgs]
     
     session = FuturesSession()
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_url = {session.get(url): url for url in randomized_urls}
-        pbar = tqdm(as_completed(future_to_url), total=len(future_to_url.keys()))
+        pbar = tqdm(as_completed(future_to_url), initial=start_pos, total=start_pos + len(future_to_url.keys()))
         for future in pbar:
             try:
-                resp = future.result()
+                resp = future.result(timeout=timeout)
             except:
                 continue
             url = future_to_url[future]
@@ -138,20 +139,20 @@ def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--max-imgs", default=None, type=int)
-    parser.add_argument("--seed", default=None, type=int)
+    parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--start", default=0, type=int)
+    parser.add_argument("--timeout", default=None, type=int)
     args = parser.parse_args()
     max_imgs = args.max_imgs
     seed = args.seed
     start_pos = args.start
+    timeout = args.timeout
     
-    if seed is not None:
-        print(f"setting seed to {seed}")
-        np.random.seed(seed)
-    
+    print(f"setting seed to {seed}")
+    np.random.seed(seed)    
     print("organize urls..")
     train_csv, test_csv, urls_df = _get_fec_urls()
     print("fetch images..")
-    _fetch_fec_imgs(urls_df, max_imgs=max_imgs, start_pos=start_pos)
+    _fetch_fec_imgs(urls_df, max_imgs=max_imgs, timeout=timeout, start_pos=start_pos)
     print("process csvs..")
     _normalize_csvs(train_csv, test_csv, urls_df)
