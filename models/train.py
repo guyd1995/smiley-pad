@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import importlib
-from pathlib import Path
 from itertools import cycle
 facenet_pytorch = importlib.import_module('facenet-pytorch')
 InceptionResnetV1 = facenet_pytorch.models.inception_resnet_v1.InceptionResnetV1
@@ -56,7 +55,7 @@ class FecDataset(Dataset):
         return inputs, torch.LongTensor([target]), torch.LongTensor([triplet_type])
         
     def _preprocess_img(self, img_path):
-        img = Image.open(Path(img_path).as_posix()).convert('RGB')
+        img = Image.open(img_path).convert('RGB')
         img = img.resize(self.dims)
         data = np.array(img) / 255.
         data = torch.Tensor(data)
