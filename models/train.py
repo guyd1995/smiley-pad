@@ -117,11 +117,13 @@ def triplet_loss(outputs, target, delta):
     return F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e1)) + F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e2))
 
 
-def train(batch_size, num_steps, lr, device):
+def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq, checkpoint_model):
     print("load datasets and model..")
     train_ds = FecDataset("FEC_dataset/processed_train.csv")
     test_df = FecDataset("FEC_dataset/processed_test.csv")
     model = FecNet().to(device)
+    if checkpoint_model is not None:
+        model.load_state_dict(torch.load(checkpoint_model)['state_dict'])
 
     print("start training")
     delta = .1
@@ -141,15 +143,23 @@ def train(batch_size, num_steps, lr, device):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        pbar.set_postfix_str(f"Loss: {running_loss/(1+i):.2f}")
-
+        avg_loss = running_loss / (1+i)
+        pbar.set_postfix_str(f"Loss: {avg_loss:.2f}")
+        if (1 + i) % checkpoint_freq == 0:
+            torch.save({"num_steps": num_steps, "state_dict": model.state_dict(), "loss": avg_loss},
+                      f"{checkpoint_folder}/model.pt")
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--batch-size", default=30, type=int)
     parser.add_argument("--lr", default=4e-5, type=float)
     parser.add_argument("--num-steps", default=50000, type=int)
+    parser.add_argument("--checkpoint-freq", default=500, type=int)
+    parser.add_argument("--from-checkpoint", default=None, type=str)
     args = parser.parse_args()
-
+    checkpoint_folder = "checkpoints"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    train(batch_size=args.batch_size, num_steps=args.num_steps, lr=args.lr, device=device)
+    
+    train(batch_size=args.batch_size, num_steps=args.num_steps, lr=args.lr, 
+          checkpoint_folder=checkpoint_folder,
+          checkpoint_freq=args.checkpoint_freq, device=device, checkpoint_model=args.from_checkpoint)
