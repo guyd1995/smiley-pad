@@ -74,7 +74,7 @@ class FecNet(nn.Module):
         self.conv = nn.Conv2d(896, 512, (1,1))
         self.dense_block = _DenseBlock(num_layers=5, num_input_features=512, growth_rate=64, bn_size=4, drop_rate=0)
         self.avg_pool = nn.AvgPool2d(12)
-        self.dropout = nn.Drouput(dropout_rate)
+        self.dropout = nn.Dropout(dropout_rate)
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(832, 512)
         self.fc2 = nn.Linear(512, 16)
