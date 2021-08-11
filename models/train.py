@@ -57,7 +57,7 @@ class FecDataset(Dataset):
     def _preprocess_img(self, img_path):
         img = Image.open(img_path).convert('RGB')
         img = img.resize(self.dims)
-        data = np.array(img) / 255.
+        data = (np.array(img) - 127.5) / 128. # the pre-processing method from facenet-pytorch
         data = torch.Tensor(data)
         data = data.permute(2, 0, 1)
         return data

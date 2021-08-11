@@ -1,8 +1,8 @@
 # SmileyPad: Training FecNet
 ## Introduction
-This part of the repository contains code pertaining to the training of the model at the core of SmileyPad. It is not necessary in order to make SmileyPad work, but is provided mostly for curious developers interested in reproducing the construction of the model.
-
+This part of the repository contains code pertaining to the training of the model at the core of SmileyPad. It is not necessary for SmileyPad to operate, but is provided for the curious developer interested in reproducing the construction of the model.
 The model is a variant based on an architecture presented in [[1]](#1) called FecNet. The dataset was also first introduced in the same paper. 
+
 
 ## Using Code
 In order to use the code you will need to complete the following steps:
@@ -12,9 +12,9 @@ We are using facenet-pytorch as the backbone of our neural network. We need to i
 
 ```
 git submodule init
-
 git submodule update
 ```
+
 
 ### Download FEC Dataset
 This is the dataset presented in the mentioned paper. To download it, you will need to agree to the authors' terms.
@@ -22,6 +22,7 @@ This is the dataset presented in the mentioned paper. To download it, you will n
 <b>To download the dataset</b>: [FEC Dataset](https://ai.google/tools/datasets/google-facial-expression/)
 
 Once you download the dataset, extract it into a subdirectory named "FEC_dataset" in this directory (meaning there will be a directory called "FEC_dataset" which will contain the dataset in a subdirectory also named "FEC_dataset").
+
 
 ### Preprocess Dataset
 run
@@ -36,6 +37,7 @@ Notice:
 * This script is randomized, but you provide a seed (0, by default), so as long as you keep the same seed, `--start` will work as expected, otherwise you cannot expect it to behave in a proper way. The main takeaway is: if you don't touch the seed, you don't need to worry about undefined behavior
 
 * The code hangs when you send keyboard interrupts, so you will have to kill it in a more aggressive way. Again, this is to be fixed in the future.
+
 
 ### Train
 
