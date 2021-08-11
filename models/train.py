@@ -67,13 +67,14 @@ class FecDataset(Dataset):
 
 
 class FecNet(nn.Module):
-    def __init__(self):
+    def __init__(self, dropout_rate=.2):
         super().__init__()
         resnet = InceptionResnetV1(pretrained='vggface2').eval()        
         self.backbone = intermediate_layer_getter(resnet, 'mixed_6a') 
         self.conv = nn.Conv2d(896, 512, (1,1))
         self.dense_block = _DenseBlock(num_layers=5, num_input_features=512, growth_rate=64, bn_size=4, drop_rate=0)
         self.avg_pool = nn.AvgPool2d(12)
+        self.dropout = nn.Drouput(dropout_rate)
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(832, 512)
         self.fc2 = nn.Linear(512, 16)
@@ -81,11 +82,13 @@ class FecNet(nn.Module):
     def forward(self, x):
         with torch.no_grad():
             x = self.backbone(x).detach()
+        x = self.dropout(x)
         x = self.conv(x)
         x = F.relu(x)
         x = self.dense_block(x)
         x = self.avg_pool(x)
         x = self.flatten(x)
+        x = self.dropout(x)
         x = self.fc1(x)
         x = F.relu6(x)
         x = self.fc2(x)
@@ -128,7 +131,7 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
 
     print("start training")
     delta = .1
-    train_loader = DataLoader(train_ds, batch_size=batch_size)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     optimizer = Adam(model.parameters(), lr=lr)
     running_loss = 0
     pbar = tqdm(cycle(train_loader), total=num_steps)
