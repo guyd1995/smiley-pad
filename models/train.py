@@ -18,6 +18,14 @@ facenet_pytorch = importlib.import_module('facenet-pytorch')
 InceptionResnetV1 = facenet_pytorch.models.inception_resnet_v1.InceptionResnetV1
 
 
+class Identity(nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, x):
+        return x
+
+
 def intermediate_layer_getter(model, layer_name, register_inplace=False):
     if not register_inplace:
         model = deepcopy(model)
@@ -66,11 +74,11 @@ class FecDataset(Dataset):
         return len(self.data)
 
 
-class FecNet(nn.Module):
+class OldFecNet(nn.Module):
     def __init__(self, dropout_rate=.2):
         super().__init__()
-        resnet = InceptionResnetV1(pretrained='vggface2').eval()        
-        self.backbone = intermediate_layer_getter(resnet, 'mixed_6a') 
+        resnet = InceptionResnetV1(pretrained='vggface2').eval()   
+        self.backbone = intermediate_layer_getter(resnet, 'mixed_6a')
         self.conv = nn.Conv2d(896, 512, (1,1))
         self.dense_block = _DenseBlock(num_layers=5, num_input_features=512, growth_rate=64, bn_size=4, drop_rate=0)
         self.avg_pool = nn.AvgPool2d(12)
@@ -93,6 +101,47 @@ class FecNet(nn.Module):
         x = F.relu6(x)
         x = self.fc2(x)
         x = x / F.normalize(x, dim=-1)
+        return x
+
+
+class FecNet(nn.Module):
+    def __init__(self, dropout_rate=.2):
+        super().__init__()
+        self.facenet = self._get_truncated_facenet()
+#         self.conv = nn.Conv2d(25, 3, (3,3))
+        self.densenet = DenseNet(block_config=(5,), num_init_features=512, 
+                                 growth_rate=64, num_classes=16, 
+                                 drop_rate=dropout_rate)
+        self.densenet.features[0] = nn.Conv2d(1792, 512, kernel_size=7, stride=2, padding=3, bias=False)
+        self.dropout = nn.Dropout(dropout_rate)
+#         self.fc1 = nn.Linear(1024, 512)
+#         self.bn = nn.BatchNorm1d(512)
+#         self.fc2 = nn.Linear(512, 16)
+    
+    @staticmethod
+    def _get_truncated_facenet():
+        facenet = InceptionResnetV1(pretrained='vggface2', classify=True).eval()
+        facenet.avgpool_1a = Identity()
+        facenet.last_linear = Identity()
+        facenet.last_bn = Identity()
+        facenet.logits = Identity()
+        facenet.requires_grad_(False)
+#         facenet.mixed_7a.register_forward_hook(lambda *x: print(x[1][0].shape))
+        return facenet
+    
+    def forward(self, x):
+        x = self.facenet(x)
+#         x = x.reshape((x.shape[0], 25, 32, 56))
+#         x = self.conv(x)
+#         x = F.relu(x)
+        x = x.reshape(x.shape[0], 1792, 5, 5)
+        x = self.densenet(x)
+#         x = self.dropout(x)
+#         x = self.fc1(x)
+#         x = self.bn(x)
+#         x = F.relu6(x)
+#         x = self.fc2(x)
+        x = F.normalize(x, p=2, dim=-1)
         return x
 
     
@@ -146,13 +195,17 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
         inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
         outputs = list(map(lambda x: model(x.squeeze(1)), (inp1, inp2, inp3)))
         loss = triplet_loss(outputs, target, delta * (1 + triplet_type)).mean()
+        
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
         avg_loss = running_loss / (1+i)
         pbar.set_postfix_str(f"Loss: {avg_loss:.2f}")
+        
         if (1 + i) % checkpoint_freq == 0:
-            torch.save({"num_steps": num_steps, "state_dict": model.state_dict(), "loss": avg_loss},
+            torch.save({"num_steps": num_steps, 
+                        "state_dict": model.state_dict(), 
+                        "loss": avg_loss},
                       f"{checkpoint_folder}/model.pt")
 
 

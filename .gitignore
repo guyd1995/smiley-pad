@@ -1,3 +1,5 @@
+models/checkpoints
+models/__pycache__
 models/FEC_dataset
 models/experiments.ipynb
 **/*.png
