@@ -140,7 +140,7 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     optimizer = Adam(model.parameters(), lr=lr)
     running_loss = 0
-    pbar = tqdm(train_loader, total=num_steps)
+    pbar = tqdm(enumerate(train_loader), total=num_steps)
     for i, (inputs, target, triplet_type) in pbar:
         if i >= num_steps:
             break
