@@ -16,3 +16,4 @@ models/experiments.ipynb
 .externalNativeBuild
 gradle/wrapper/gradle-wrapper.jar
 models/.ipynb_checkpoints/experiments-checkpoint.ipynb
+*.pyc
