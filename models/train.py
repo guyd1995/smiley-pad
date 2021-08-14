@@ -98,12 +98,13 @@ class FecNet(nn.Module):
         facenet.last_linear = Identity()
         facenet.last_bn = Identity()
         facenet.logits = Identity()
+        facenet = intermediate_layer_getter(facenet, 'mixed_7a')
         facenet.requires_grad_(False)
         return facenet
     
     def forward(self, x):
         x = self.facenet(x)
-        x = x.reshape(x.shape[0], 1792, 5, 5)
+#         x = x.reshape(x.shape[0], 1792, 5, 5)
         x = self.densenet(x)
         x = F.normalize(x, p=2, dim=-1)
         return x
