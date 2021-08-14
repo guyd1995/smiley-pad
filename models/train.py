@@ -25,6 +25,13 @@ class Identity(nn.Module):
     def forward(self, x):
         return x
 
+    
+def get_model(path, device='cpu'):
+    model = FecNet().to(device)
+    if path is not None:
+        model.load_state_dict(torch.load(path, map_location=torch.device(device))['state_dict'])
+    return model
+
 
 def intermediate_layer_getter(model, layer_name, register_inplace=False):
     if not register_inplace:
@@ -116,30 +123,32 @@ def batched_index_select(inputs, indices, dim):
     return inputs.gather(dim=dim, index=indices.reshape(unsqueezed_shape).expand(*expand_shape)).squeeze(dim)
     
 
-def triplet_loss(outputs, target, delta):
+def get_metrics(outputs, target, delta):
     def l2_squared(x): return torch.sum(x**2, dim=-1)
     
     outputs = torch.stack(outputs, dim=1)
     e1 = batched_index_select(outputs, (1+target)%3, dim=1)
     e2 = batched_index_select(outputs, (2+target)%3, dim=1)
     e3 = batched_index_select(outputs, target, dim=1)
-
-    return F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e1)) + F.relu(delta + l2_squared(e2-e1) - l2_squared(e3-e2))
+    L12 = l2_squared(e2-e1)
+    L13 = l2_squared(e3-e1)
+    L23 = l2_squared(e3-e2)
+    accuracy = (L12 < L13) * (L12 < L23)
+    loss = F.relu(delta + L12 - L13) + F.relu(delta + L12 - L23)
+    return loss.mean(), accuracy.float().mean()
 
 
 def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq, checkpoint_model):
     print("load datasets and model..")
     train_ds = FecDataset("FEC_dataset/processed_train.csv")
     test_df = FecDataset("FEC_dataset/processed_test.csv")
-    model = FecNet().to(device)
-    if checkpoint_model is not None:
-        model.load_state_dict(torch.load(checkpoint_model)['state_dict'])
-
+    model = get_model(path=checkpoint_model, device=device)
     print("start training")
     delta = .1
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     optimizer = Adam(model.parameters(), lr=lr)
     running_loss = 0
+    running_acc = 0
     pbar = tqdm(enumerate(train_loader), total=num_steps)
     for i, (inputs, target, triplet_type) in pbar:
         if i >= num_steps:
@@ -151,13 +160,15 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
         optimizer.zero_grad()
         inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
         outputs = list(map(lambda x: model(x.squeeze(1)), (inp1, inp2, inp3)))
-        loss = triplet_loss(outputs, target, delta * (1 + triplet_type)).mean()
+        loss, accuracy = get_metrics(outputs, target, delta * (1 + triplet_type))
         
         loss.backward()
         optimizer.step()
+        running_acc += accuracy.item()
         running_loss += loss.item()
         avg_loss = running_loss / (1+i)
-        pbar.set_postfix_str(f"Loss: {avg_loss:.2f}")
+        avg_acc = running_acc / (1+i)
+        pbar.set_postfix_str(f"Loss: {avg_loss:.2f} Acc: {avg_acc:.2f}")
         
         if (1 + i) % checkpoint_freq == 0:
             torch.save({"num_steps": num_steps, 
@@ -166,6 +177,40 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
                       f"{checkpoint_folder}/model.pt")
 
 
+def evaluate(batch_size, num_steps, device, checkpoint_model):
+    print("load datasets and model..")
+    test_ds = FecDataset("FEC_dataset/processed_test.csv")
+    model = get_model(path=checkpoint_model, device=device)
+    model.eval()
+    print("start evaluation..")
+    delta = .1
+    test_loader = iter(DataLoader(test_ds, batch_size=batch_size, shuffle=True))
+    running_loss = 0
+    running_acc = 0
+    pbar = tqdm(range(num_steps), total=num_steps)
+    i = 0
+    for _ in pbar:
+        try: 
+            (inputs, target, triplet_type) = next(test_loader)
+        except:
+            print("error")
+            continue
+        inputs = inputs.to(device)
+        target = target.to(device)
+        triplet_type = triplet_type.to(device)
+        
+        inp1, inp2, inp3 = torch.split(inputs, 1, dim=1)
+        outputs = list(map(lambda x: model(x.squeeze(1)), (inp1, inp2, inp3)))
+        loss, accuracy = get_metrics(outputs, target, delta * (1 + triplet_type))
+        
+        running_acc += accuracy.item()
+        running_loss += loss.item()
+        avg_loss = running_loss / (1+i)
+        avg_acc = running_acc / (1+i)
+        pbar.set_postfix_str(f"Loss: {avg_loss:.2f} Acc: {avg_acc:.2f}")
+        i += 1
+
+        
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--batch-size", default=30, type=int)
@@ -173,10 +218,15 @@ if __name__ == "__main__":
     parser.add_argument("--num-steps", default=50000, type=int)
     parser.add_argument("--checkpoint-freq", default=500, type=int)
     parser.add_argument("--from-checkpoint", default=None, type=str)
+    parser.add_argument("--do_eval", action="store_true")
     args = parser.parse_args()
     checkpoint_folder = "checkpoints"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    train(batch_size=args.batch_size, num_steps=args.num_steps, lr=args.lr, 
-          checkpoint_folder=checkpoint_folder,
-          checkpoint_freq=args.checkpoint_freq, device=device, checkpoint_model=args.from_checkpoint)
+    if args.do_eval:
+        evaluate(batch_size=args.batch_size, num_steps=args.num_steps, device=device, 
+                 checkpoint_model=args.from_checkpoint)        
+    else:
+        train(batch_size=args.batch_size, num_steps=args.num_steps, lr=args.lr, 
+              checkpoint_folder=checkpoint_folder,
+              checkpoint_freq=args.checkpoint_freq, device=device, checkpoint_model=args.from_checkpoint)
