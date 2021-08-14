@@ -1,3 +1,12 @@
 package com.dar.guy.smileypad
-import com.dar.guy.smileypad.SmileyPadKeyboard
-class SmileyPadImeService : SmileyPadKeyboard()
+
+import android.content.Intent
+import android.view.View
+
+class SmileyPadImeService : SmileyPadKeyboard(){
+    fun startCamera(view: View?){
+        val intent = Intent(this, CameraActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+}

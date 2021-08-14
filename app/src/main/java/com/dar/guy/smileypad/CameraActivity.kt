@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
+import android.view.View
 import android.widget.Toast
 
 
@@ -21,7 +22,7 @@ class CameraActivity : AppCompatActivity(){
         setContentView(R.layout.activity_camera)
     }
 
-    fun startCamera(){
+    fun startCamera2(view: View?){
 
         val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         try {

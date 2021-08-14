@@ -13,8 +13,8 @@ open class SmileyPadKeyboard : InputMethodService(), KeyboardView.OnKeyboardActi
     private var keyboardLayoutView: View? = null
     private var mainKeyboardView: KeyboardView? = null
     private var keyboard: Keyboard? = null
-
     private var caps = false
+
 
     override fun onCreateInputView(): View {
         keyboardLayoutView = layoutInflater.inflate(R.layout.keyboard_view, null)
