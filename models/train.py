@@ -82,7 +82,7 @@ class FecDataset(Dataset):
 
 
 class FecNet(nn.Module):
-    def __init__(self, dropout_rate=.2):
+    def __init__(self, dropout_rate=.5):
         super().__init__()
         self.facenet = self._get_truncated_facenet()
         self.densenet = DenseNet(block_config=(5,), num_init_features=512, 
