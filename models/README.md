@@ -21,7 +21,7 @@ This is the dataset presented in the mentioned paper. To download it, you will n
 
 <b>To download the dataset</b>: [FEC Dataset](https://ai.google/tools/datasets/google-facial-expression/)
 
-Once you download the dataset, extract it into a subdirectory named "FEC_dataset" in this directory (meaning there will be a directory called "FEC_dataset" which will contain the dataset in a subdirectory also named "FEC_dataset").
+Once you download the dataset, extract it into a subdirectory named "FEC_dataset" in the same directory as this repository's main folder is (meaning next to "smiley-pad" there will be a directory called "FEC_dataset" which will contain the dataset in a subdirectory also named "FEC_dataset". We advise you to have a parent directory called "smiley-pad" that will contain both "smiley-pad" and "FEC_dataset").
 
 
 ### Preprocess Dataset

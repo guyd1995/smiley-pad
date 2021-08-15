@@ -13,6 +13,7 @@ from requests_futures.sessions import FuturesSession
 from argparse import ArgumentParser
 from pathlib import Path
 
+
 original_csv_header = [
           'url0', 'left0', 'right0', 'top0', 'bottom0', 
           'url1', 'left1', 'right1', 'top1', 'bottom1', 
@@ -27,7 +28,7 @@ original_csv_header = [
           ]
 
 
-def _get_fec_urls(folder='FEC_dataset', force_https=False):
+def _get_fec_urls(folder='../../FEC_dataset', force_https=False):
     csv_folder = folder + "/FEC_dataset"
     train_path = csv_folder + "/faceexp-comparison-data-train-public.csv"
     test_path = csv_folder + "/faceexp-comparison-data-test-public.csv"
@@ -113,7 +114,7 @@ def _fetch_fec_imgs(urls_df, max_imgs=None, timeout=None, folder="FEC_dataset", 
             os.remove(img_path)
 
 
-def _normalize_csvs(train_csv, test_csv, urls_df, folder='FEC_dataset'):
+def _normalize_csvs(train_csv, test_csv, urls_df, folder='../../FEC_dataset'):
     all_imgs = list(map(os.path.normpath, glob(f'{folder}/images/*.jpg')))
     all_urls = list(urls_df.orig_url)
     all_urls = {all_urls[i]: i for i in range(len(all_urls))}

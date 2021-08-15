@@ -141,8 +141,8 @@ def get_metrics(outputs, target, delta):
 
 def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq, checkpoint_model):
     print("load datasets and model..")
-    train_ds = FecDataset("FEC_dataset/processed_train.csv")
-    test_df = FecDataset("FEC_dataset/processed_test.csv")
+    train_ds = FecDataset("../../FEC_dataset/processed_train.csv")
+    test_df = FecDataset("../../FEC_dataset/processed_test.csv")
     model = get_model(path=checkpoint_model, device=device)
     print("start training")
     delta = .1
@@ -180,7 +180,7 @@ def train(batch_size, num_steps, lr, device, checkpoint_folder, checkpoint_freq,
 
 def evaluate(batch_size, num_steps, device, checkpoint_model):
     print("load datasets and model..")
-    test_ds = FecDataset("FEC_dataset/processed_test.csv")
+    test_ds = FecDataset("../../FEC_dataset/processed_test.csv")
     model = get_model(path=checkpoint_model, device=device)
     model.eval()
     print("start evaluation..")
