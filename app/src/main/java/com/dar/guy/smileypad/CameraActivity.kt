@@ -1,40 +1,123 @@
 package com.dar.guy.smileypad
 
+
 import android.Manifest
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Bundle
-import android.os.PersistableBundle
-import android.provider.MediaStore
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
-import android.view.View
+import android.os.SystemClock
+import android.util.Size
+import android.view.TextureView
 import android.widget.Toast
+import androidx.annotation.UiThread
+import androidx.annotation.WorkerThread
+import androidx.camera.core.*
+import androidx.camera.core.Preview.OnPreviewOutputUpdateListener
+import androidx.camera.core.Preview.PreviewOutput
+import androidx.core.app.ActivityCompat
+import android.view.View
+import android.view.ViewStub
+import com.dar.guy.smileypad.R
+
+import android.text.TextUtils;
+import android.util.Log;
+import android.widget.TextView;
+
+import org.pytorch.IValue;
+import org.pytorch.Module;
+import org.pytorch.Tensor;
+import org.pytorch.torchvision.TensorImageUtils;
+
+import java.io.File;
+import java.nio.FloatBuffer;
+import java.util.LinkedList;
+import java.util.Locale;
+import java.util.Queue;
 
 
-class CameraActivity : AppCompatActivity(){
-    var REQUEST_IMAGE_CAPTURE = 1
-    override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
-        super.onCreate(savedInstanceState, persistentState)
+
+class CameraActivity : BaseModuleActivity() {
+    private var mLastAnalysisResultTime: Long = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
-    }
-
-    fun startCamera2(view: View?){
-
-        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        try {
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
-        } catch (e: ActivityNotFoundException) {
-            // display error state to the user
+        startBackgroundThread()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                PERMISSIONS,
+                REQUEST_CODE_CAMERA_PERMISSION
+            )
+        } else {
+            setupCameraX()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            val imageBitmap = data!!.extras!!.get("data") as Bitmap
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults: IntArray
+    ) {
+        if (requestCode == REQUEST_CODE_CAMERA_PERMISSION) {
+            if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                Toast.makeText(
+                    this,
+                    "You can't use image classification example without granting CAMERA permission",
+                    Toast.LENGTH_LONG
+                )
+                    .show()
+                finish()
+            } else {
+                setupCameraX()
+            }
         }
+    }
+
+    private fun setupCameraX() {
+        val textureView = getCameraPreviewTextureView()
+        val previewConfig = PreviewConfig.Builder().build()
+        val preview = Preview(previewConfig)
+        preview.onPreviewOutputUpdateListener =
+            OnPreviewOutputUpdateListener { output: PreviewOutput ->
+                textureView?.surfaceTexture = output.surfaceTexture
+            }
+        val imageAnalysisConfig = ImageAnalysisConfig.Builder()
+            .setTargetResolution(Size(224, 224))
+            .setCallbackHandler(mBackgroundHandler!!)
+            .setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
+            .build()
+        val imageAnalysis = ImageAnalysis(imageAnalysisConfig)
+        imageAnalysis.analyzer =
+            ImageAnalysis.Analyzer { image: ImageProxy?, rotationDegrees: Int ->
+                if (SystemClock.elapsedRealtime() - mLastAnalysisResultTime < 500) {
+                    return@Analyzer
+                }
+                val result = analyzeImage(image, rotationDegrees)
+                if (result != null) {
+                    mLastAnalysisResultTime = SystemClock.elapsedRealtime()
+                    runOnUiThread { applyToUiAnalyzeImageResult(result) }
+                }
+            }
+        CameraX.bindToLifecycle(this, preview, imageAnalysis)
+    }
+
+    protected fun getCameraPreviewTextureView(): TextureView? {
+        return (findViewById<View>(R.id.texture_view_stub) as ViewStub)
+            .inflate()
+            .findViewById(R.id.texture_view)
+    }
+
+    @WorkerThread
+    protected fun analyzeImage(image: ImageProxy?, rotationDegrees: Int): R?{
+        return null;
+    }
+    @UiThread
+    protected fun applyToUiAnalyzeImageResult(result: R){
+
+    }
+
+    companion object {
+        private const val REQUEST_CODE_CAMERA_PERMISSION = 200
+        private val PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 }
