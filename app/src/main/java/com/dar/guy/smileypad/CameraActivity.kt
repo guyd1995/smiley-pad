@@ -1,6 +1,5 @@
 package com.dar.guy.smileypad
 
-
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -17,25 +16,10 @@ import androidx.camera.core.Preview.PreviewOutput
 import androidx.core.app.ActivityCompat
 import android.view.View
 import android.view.ViewStub
-import com.dar.guy.smileypad.R
-import com.dar.guy.smileypad.EmojiModeling
-
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity
-
-import org.pytorch.IValue;
-import org.pytorch.Module;
-import org.pytorch.Tensor;
-import org.pytorch.torchvision.TensorImageUtils;
-
-import java.io.File;
-import java.nio.FloatBuffer;
-import java.util.LinkedList;
-import java.util.Locale;
-import java.util.Queue;
-
 
 
 class CameraActivity :  AppCompatActivity() {
@@ -43,10 +27,12 @@ class CameraActivity :  AppCompatActivity() {
     protected var mBackgroundHandler: Handler? = null
     protected var mUIHandler: Handler? = null
     private var mLastAnalysisResultTime: Long = 0
+    private var mEmojiModeling: EmojiModeling? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mUIHandler = Handler(mainLooper)
+        mEmojiModeling = EmojiModeling()
 
         setContentView(R.layout.activity_camera)
         startBackgroundThread()
@@ -82,6 +68,7 @@ class CameraActivity :  AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mEmojiModeling?.destroy()
         stopBackgroundThread()
         super.onDestroy()
     }
@@ -124,7 +111,7 @@ class CameraActivity :  AppCompatActivity() {
                 if (SystemClock.elapsedRealtime() - mLastAnalysisResultTime < 500) {
                     return@Analyzer
                 }
-                val result = EmojiModeling.analyzeImage(image, rotationDegrees)
+                val result = mEmojiModeling!!.analyzeImage(this, image!!, rotationDegrees)
                 if (result != null) {
                     mLastAnalysisResultTime = SystemClock.elapsedRealtime()
                     runOnUiThread { applyToUiAnalyzeImageResult(result) }
@@ -140,7 +127,7 @@ class CameraActivity :  AppCompatActivity() {
     }
 
     @UiThread
-    protected fun applyToUiAnalyzeImageResult(result: R){
+    protected fun applyToUiAnalyzeImageResult(result: EmojiModeling.AnalysisResult?){
 
     }
 
