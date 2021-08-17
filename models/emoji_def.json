@@ -1,11 +1,14 @@
 [
   {
     "name": "happy",
-    "samples": []
+    "samples":
+    ["../../FEC_dataset/images/97056_0.jpg",
+      "../../FEC_dataset/images/97152_0.jpg"]
   },
   {
     "name": "sad",
-    "samples": []
+    "samples":
+    ["../../FEC_dataset/images/98540_0.jpg"]
   }
 
 ]

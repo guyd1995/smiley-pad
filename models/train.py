@@ -89,8 +89,10 @@ class FecNet(nn.Module):
         self.densenet = DenseNet(block_config=(5,), num_init_features=512, 
                                  growth_rate=64, num_classes=16, 
                                  drop_rate=dropout_rate)
-        self.densenet.features[0] = nn.Conv2d(1792, 512, kernel_size=7, stride=2, padding=3, bias=False)
-        self.dropout = nn.Dropout(dropout_rate)
+        self.densenet.features[0] = nn.Sequential(nn.Conv2d(1792, 64, kernel_size=7, stride=2, padding=3, bias=False),
+                                                  nn.Dropout(dropout_rate),
+                                                  nn.Conv2d(64, 512, kernel_size=7, stride=2, padding=3, bias=False)
+                                                 )
     
     @staticmethod
     def _get_truncated_facenet():
@@ -105,7 +107,6 @@ class FecNet(nn.Module):
     
     def forward(self, x):
         x = self.facenet(x)
-#         x = x.reshape(x.shape[0], 1792, 5, 5)
         x = self.densenet(x)
         x = F.normalize(x, p=2, dim=-1)
         return x
@@ -215,12 +216,12 @@ def evaluate(batch_size, num_steps, device, checkpoint_model):
         
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--batch-size", default=30, type=int)
+    parser.add_argument("--batch-size", default=8, type=int)
     parser.add_argument("--lr", default=4e-5, type=float)
     parser.add_argument("--num-steps", default=50000, type=int)
     parser.add_argument("--checkpoint-freq", default=500, type=int)
     parser.add_argument("--from-checkpoint", default=None, type=str)
-    parser.add_argument("--do_eval", action="store_true")
+    parser.add_argument("--do-eval", action="store_true")
     args = parser.parse_args()
     checkpoint_folder = "checkpoints"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

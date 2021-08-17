@@ -2,10 +2,7 @@ package com.dar.guy.smileypad
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.SystemClock
+import android.os.*
 import android.util.Size
 import android.view.TextureView
 import android.widget.Toast
@@ -18,6 +15,7 @@ import android.view.View
 import android.view.ViewStub
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Button
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity
 
@@ -28,13 +26,20 @@ class CameraActivity :  AppCompatActivity() {
     protected var mUIHandler: Handler? = null
     private var mLastAnalysisResultTime: Long = 0
     private var mEmojiModeling: EmojiModeling? = null
+    private var messageHandler: MessageHandler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        messageHandler = intent.extras?.get("MESSENGER") as MessageHandler
         mUIHandler = Handler(mainLooper)
         mEmojiModeling = EmojiModeling()
 
         setContentView(R.layout.activity_camera)
+        findViewById<Button>(R.id.send_emoji).setOnClickListener {
+            sendResultAndDie()
+        }
+
         startBackgroundThread()
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
@@ -47,6 +52,12 @@ class CameraActivity :  AppCompatActivity() {
         } else {
             setupCameraX()
         }
+    }
+
+    fun sendResultAndDie(){
+        val msg = Message.obtain()
+        messageHandler?.sendMessage(msg)
+        finish()
     }
 
     protected fun startBackgroundThread() {
