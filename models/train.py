@@ -56,27 +56,28 @@ def intermediate_layer_getter(model, layer_name, register_inplace=False):
     return _IntermediateLayerModel()
 
 
+IMG_DIMS = (224, 224)
+def preprocess_img(img_path):
+    img = Image.open(img_path).convert('RGB')
+    img = img.resize(IMG_DIMS)
+    data = (np.array(img) - 127.5) / 128. # the pre-processing method from facenet-pytorch
+    data = torch.Tensor(data)
+    data = data.permute(2, 0, 1)
+    return data
+
+
 class FecDataset(Dataset):
-    dims = (224, 224)
     def __init__(self, csv_path):
         self.data = pd.read_csv(csv_path)
         
     def __getitem__(self, idx):
         data = self.data.iloc[idx]
-        img0, img1, img2 = map(self._preprocess_img, (data['img0'], data['img1'], data['img2']))
+        img0, img1, img2 = map(preprocess_img, (data['img0'], data['img1'], data['img2']))
         inputs = torch.stack([img0, img1, img2], dim=0)
         target = data['target']
         triplet_type = data['triplet_type']
         return inputs, torch.LongTensor([target]), torch.LongTensor([triplet_type])
-        
-    def _preprocess_img(self, img_path):
-        img = Image.open(img_path).convert('RGB')
-        img = img.resize(self.dims)
-        data = (np.array(img) - 127.5) / 128. # the pre-processing method from facenet-pytorch
-        data = torch.Tensor(data)
-        data = data.permute(2, 0, 1)
-        return data
-    
+            
     def __len__(self):
         return len(self.data)
 
