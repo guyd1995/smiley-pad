@@ -18,6 +18,9 @@ import android.util.Log;
 import android.widget.Button
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.ImageCapture
+
+
 
 
 class CameraActivity :  AppCompatActivity() {
@@ -25,13 +28,15 @@ class CameraActivity :  AppCompatActivity() {
     protected var mBackgroundHandler: Handler? = null
     protected var mUIHandler: Handler? = null
     private var mLastAnalysisResultTime: Long = 0
+    private var mImageCapture: ImageCapture? = null
     private var mEmojiModeling: EmojiModeling? = null
-    private var messageHandler: MessageHandler? = null
+    private var messageHandler: Messenger? = null
+    private val mContext = this
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        messageHandler = intent.extras?.get("MESSENGER") as MessageHandler
+        messageHandler = intent.extras?.get("MESSENGER") as Messenger
         mUIHandler = Handler(mainLooper)
         mEmojiModeling = EmojiModeling()
 
@@ -55,9 +60,26 @@ class CameraActivity :  AppCompatActivity() {
     }
 
     fun sendResultAndDie(){
-        val msg = Message.obtain()
-        messageHandler?.sendMessage(msg)
-        finish()
+
+        mImageCapture?.takePicture(object: ImageCapture.OnImageCapturedListener() {
+            override fun onCaptureSuccess(image: ImageProxy?, rotationDegrees: Int) {
+                val result = mEmojiModeling!!.analyzeImage(mContext, image!!, rotationDegrees)
+                val msg = Message.obtain()
+                msg.arg1 = result!!.value
+                messageHandler?.send(msg)
+                super.onCaptureSuccess(image, rotationDegrees)
+                finish()
+            }
+            override fun onError(
+                imageCaptureError: ImageCapture.ImageCaptureError,
+                message: String,
+                cause: Throwable?) {
+                super.onError(imageCaptureError, message, cause)
+                // error in capturing
+                finish()
+            }
+        })
+
     }
 
     protected fun startBackgroundThread() {
@@ -110,6 +132,8 @@ class CameraActivity :  AppCompatActivity() {
             OnPreviewOutputUpdateListener { output: PreviewOutput ->
                 textureView?.surfaceTexture = output.surfaceTexture
             }
+
+        // streaming image analysis
         val imageAnalysisConfig = ImageAnalysisConfig.Builder()
             .setLensFacing(CameraX.LensFacing.FRONT)
             .setTargetResolution(Size(224, 224))
@@ -128,7 +152,15 @@ class CameraActivity :  AppCompatActivity() {
                     runOnUiThread { applyToUiAnalyzeImageResult(result) }
                 }
             }
-        CameraX.bindToLifecycle(this, preview, imageAnalysis)
+
+        // captured image analysis
+        val imageCaptureConfig = ImageCaptureConfig.Builder()
+            .setLensFacing(CameraX.LensFacing.FRONT)
+            .setTargetResolution(Size(224, 224))
+            .build()
+        mImageCapture = ImageCapture(imageCaptureConfig)
+
+        CameraX.bindToLifecycle(this, preview, mImageCapture) // , imageAnalysis
     }
 
     protected fun getCameraPreviewTextureView(): TextureView? {

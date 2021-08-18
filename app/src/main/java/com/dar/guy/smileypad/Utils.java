@@ -28,7 +28,8 @@ public class Utils {
             }
             return file.getAbsolutePath();
         } catch (IOException e) {
-            Log.e("SmileyPadError", "Error process asset " + assetName + " to file path");
+            Log.e("SmileyPadError", "Error process asset " + assetName + " to file path." +
+                    e.toString());
         }
         return null;
     }

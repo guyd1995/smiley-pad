@@ -29,7 +29,7 @@ class Identity(nn.Module):
 def get_model(path, device='cpu'):
     model = FecNet().to(device)
     if path is not None:
-        model.load_state_dict(torch.load(path, map_location=torch.device(device))['state_dict'])
+        model.load_state_dict(torch.load(path, map_location=torch.device(device))['state_dict'], strict=False)
     return model
 
 
@@ -97,6 +97,8 @@ class FecNet(nn.Module):
     @staticmethod
     def _get_truncated_facenet():
         facenet = InceptionResnetV1(pretrained='vggface2', classify=True).eval()
+        facenet.repeat_3 = Identity()
+        facenet.block8 = Identity()
         facenet.avgpool_1a = Identity()
         facenet.last_linear = Identity()
         facenet.last_bn = Identity()

@@ -17,7 +17,8 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".CameraActivity">
+        <activity android:name=".CameraActivity"
+                  android:theme="@style/Theme.AppCompat.Dialog">
         </activity>
 
         <!-- Declares the input method service -->

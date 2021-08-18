@@ -8,15 +8,16 @@ import torch.nn.functional as F
 from PIL import Image
 
 def add_emoji_classifier(model, emoji_def):
+    model.eval()
     all_samples = []
-
     for i, emoji_data in enumerate(emoji_def):
         samples = emoji_data['samples']
         all_samples.extend(samples)
     
+    sample_vectors = []
     with torch.no_grad():
         for img_path in all_samples:
-            sample_vectors.append(model(preprocess_input(img_path).unsqueeze(0)).squeeze(0).detach())
+            sample_vectors.append(model(preprocess_img(img_path).unsqueeze(0)).squeeze(0).detach())
         sample_vectors = torch.stack(sample_vectors, dim=1)
         
     class EmojiClassifier(nn.Module):
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     emoji_json_path = args.emoji_json
     to_assets = args.to_assets_folder
     
+    print("fetching model and json")
     with open(emoji_json_path, "r") as f:
         emoji_def = json.load(f)
     
