@@ -18,3 +18,5 @@ gradle/wrapper/gradle-wrapper.jar
 models/.ipynb_checkpoints/experiments-checkpoint.ipynb
 *.pyc
 models/__pycache__/train.cpython-38.pyc
+*.ptl
+*.pt

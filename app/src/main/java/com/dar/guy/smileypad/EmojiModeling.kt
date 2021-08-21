@@ -1,6 +1,7 @@
 package com.dar.guy.smileypad
 
 import android.content.Context
+import android.graphics.ImageDecoder
 import androidx.annotation.Nullable
 import androidx.annotation.WorkerThread
 import androidx.camera.core.ImageProxy
@@ -23,8 +24,6 @@ import java.lang.Exception
 
 private val idx2Emoji: Array<Int> = arrayOf(0, 1, 2)
 
-private const val INPUT_TENSOR_WIDTH = 224
-private const val INPUT_TENSOR_HEIGHT = 224
 private const val TOP_K = 3
 
 
@@ -43,7 +42,8 @@ class EmojiModeling {
 
         @WorkerThread
         @Nullable
-        fun analyzeImage(context: Context, image: ImageProxy, rotationDegrees: Int): AnalysisResult? {
+        fun analyzeImage(context: Context, rgbArray: FloatArray,
+                         rotationDegrees: Int): AnalysisResult? {
             return if (mAnalyzeImageErrorState) {
                 null
             } else {
@@ -53,27 +53,32 @@ class EmojiModeling {
                         Utils.assetFilePath(context, mModuleAssetName)
                     ).absolutePath
 
+                    val nPixels = Utils.INPUT_TENSOR_WIDTH * Utils.INPUT_TENSOR_HEIGHT
                     mModule = LiteModuleLoader.load(moduleFileAbsoluteFilePath)
                     mInputTensorBuffer =
-                        Tensor.allocateFloatBuffer(3 * INPUT_TENSOR_WIDTH * INPUT_TENSOR_HEIGHT)
+                        Tensor.allocateFloatBuffer(3 * nPixels)
+                    mInputTensorBuffer!!.put(rgbArray)
                     mInputTensor = Tensor.fromBlob(
                         mInputTensorBuffer,
-                        longArrayOf(1, 3, INPUT_TENSOR_HEIGHT.toLong(), INPUT_TENSOR_WIDTH.toLong())
+                        longArrayOf(1, 3, Utils.INPUT_TENSOR_HEIGHT.toLong(),
+                            Utils.INPUT_TENSOR_WIDTH.toLong())
                     )
                 }
                 val startTime = SystemClock.elapsedRealtime()
-                TensorImageUtils.imageYUV420CenterCropToFloatBuffer(
-                    image.image, rotationDegrees,
-                    INPUT_TENSOR_WIDTH, INPUT_TENSOR_HEIGHT,
-                    TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
-                    TensorImageUtils.TORCHVISION_NORM_STD_RGB,
-                    mInputTensorBuffer, 0
-                )
+
+//                TensorImageUtils.imageYUV420CenterCropToFloatBuffer(
+//                    image.image, rotationDegrees,
+//                    INPUT_TENSOR_WIDTH, INPUT_TENSOR_HEIGHT,
+//                    TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
+//                    TensorImageUtils.TORCHVISION_NORM_STD_RGB,
+//                    mInputTensorBuffer, 0
+//                )
                 val moduleForwardStartTime = SystemClock.elapsedRealtime()
                 val outputTensor = mModule!!.forward(IValue.from(mInputTensor)).toTensor()
+
                 val moduleForwardDuration = SystemClock.elapsedRealtime() - moduleForwardStartTime
                 val scores = outputTensor.dataAsFloatArray
-                Toast.makeText(context, scores.toString(), Toast.LENGTH_LONG).show()
+
                 val ixs = Utils.topK(scores, TOP_K)
                 val topKClassNames = arrayOfNulls<Int>(TOP_K)
                 val topKScores = FloatArray(TOP_K)

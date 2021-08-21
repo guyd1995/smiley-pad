@@ -63,7 +63,9 @@ class CameraActivity :  AppCompatActivity() {
 
         mImageCapture?.takePicture(object: ImageCapture.OnImageCapturedListener() {
             override fun onCaptureSuccess(image: ImageProxy?, rotationDegrees: Int) {
-                val result = mEmojiModeling!!.analyzeImage(mContext, image!!, rotationDegrees)
+                val rgbArray = Utils.flatImageToFloatArray(image!!.image)
+                val result = mEmojiModeling!!.analyzeImage(mContext, rgbArray,
+                    rotationDegrees)
                 val msg = Message.obtain()
                 msg.arg1 = result!!.value
                 messageHandler?.send(msg)
@@ -146,7 +148,8 @@ class CameraActivity :  AppCompatActivity() {
                 if (SystemClock.elapsedRealtime() - mLastAnalysisResultTime < 500) {
                     return@Analyzer
                 }
-                val result = mEmojiModeling!!.analyzeImage(this, image!!, rotationDegrees)
+                val rgbArray = Utils.flatImageToFloatArray(image!!.image)
+                val result = mEmojiModeling!!.analyzeImage(this, rgbArray, rotationDegrees)
                 if (result != null) {
                     mLastAnalysisResultTime = SystemClock.elapsedRealtime()
                     runOnUiThread { applyToUiAnalyzeImageResult(result) }
