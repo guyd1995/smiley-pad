@@ -13,8 +13,6 @@ import java.nio.FloatBuffer;
 import android.os.SystemClock
 import org.pytorch.LiteModuleLoader
 
-private val idx2Emoji: Array<Int> = arrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-
 private const val TOP_K = 3
 
 
@@ -27,7 +25,7 @@ class EmojiModeling {
 
         class AnalysisResult(
             val value: Int,
-            private val topNClassNames: Array<Int?>, private val topNScores: FloatArray,
+            private val topNClassNames: IntArray, private val topNScores: FloatArray,
             private val moduleForwardDuration: Long, private val analysisDuration: Long
         )
 
@@ -71,16 +69,14 @@ class EmojiModeling {
                 val scores = outputTensor.dataAsFloatArray
 
                 val ixs = Utils.topK(scores, TOP_K)
-                val topKClassNames = arrayOfNulls<Int>(TOP_K)
                 val topKScores = FloatArray(TOP_K)
                 for (i in 0 until TOP_K) {
                     val ix = ixs[i]
-                    topKClassNames[i] = idx2Emoji[ix]
                     topKScores[i] = scores[ix]
                 }
-                val value = topKClassNames[0]
+                val value = ixs[0]
                 val analysisDuration = SystemClock.elapsedRealtime() - startTime
-                AnalysisResult(value!!, topKClassNames, topKScores, moduleForwardDuration, analysisDuration)
+                AnalysisResult(value, ixs, topKScores, moduleForwardDuration, analysisDuration)
             }
 //            catch (e: Exception) {
 //                Log.e("SmileyPadError", "Error during image analysis", e)

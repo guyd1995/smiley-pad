@@ -11,9 +11,15 @@ from PIL import Image
 def add_emoji_classifier(model, emoji_def):
     model.eval()
     all_samples = []
+    idx2emoji = []
+    
     for i, emoji_data in enumerate(emoji_def):
         samples = emoji_data['samples']
         all_samples.extend(samples)
+        idx2emoji.extend([emoji_data['value']] * len(samples))
+
+    with open("idx2emoji.json", "w") as f:
+        json.dump(idx2emoji, f)
     
     sample_vectors = []
     with torch.no_grad():
@@ -62,9 +68,6 @@ if __name__ == "__main__":
     model = add_emoji_classifier(model, emoji_def)
     print("exporting model and json")
     export(model)
-    idx2emoji = list(map(lambda x: x['value'], emoji_def))
-    with open("idx2emoji.json", "w") as f:
-        json.dump(f, idx2emoji)
     
     if to_assets:
         raise NotImplementedError
