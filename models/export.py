@@ -7,6 +7,7 @@ from torch import nn
 import torch.nn.functional as F
 from PIL import Image
 
+
 def add_emoji_classifier(model, emoji_def):
     model.eval()
     all_samples = []
@@ -29,7 +30,6 @@ def add_emoji_classifier(model, emoji_def):
         def forward(self, x):
             x = self.model(x)           # (B, embed_dim)
             x = x @ self.sample_vectors # (B, n_samples)
-            x = F.log_softmax(x, dim=-1)
             return x
 
     return EmojiClassifier()
@@ -58,9 +58,13 @@ if __name__ == "__main__":
         emoji_def = json.load(f)
     
     model = FecNet()
-    model.load_state_dict(torch.load(model_path, map_location='cpu')['state_dict'])
+    model.load_state_dict(torch.load(model_path, map_location='cpu')['state_dict'], strict=False)
     model = add_emoji_classifier(model, emoji_def)
+    print("exporting model and json")
     export(model)
+    idx2emoji = list(map(lambda x: x['value'], emoji_def))
+    with open("idx2emoji.json", "w") as f:
+        json.dump(f, idx2emoji)
     
     if to_assets:
         raise NotImplementedError

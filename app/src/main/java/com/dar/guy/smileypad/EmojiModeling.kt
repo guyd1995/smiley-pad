@@ -1,28 +1,19 @@
 package com.dar.guy.smileypad
 
 import android.content.Context
-import android.graphics.ImageDecoder
 import androidx.annotation.Nullable
 import androidx.annotation.WorkerThread
-import androidx.camera.core.ImageProxy
 import org.pytorch.IValue;
 import org.pytorch.Module;
 import org.pytorch.Tensor;
-import org.pytorch.torchvision.TensorImageUtils;
 
 import java.io.File;
 import java.nio.FloatBuffer;
-import java.util.LinkedList;
-import java.util.Locale;
-import java.util.Queue;
 
 import android.os.SystemClock
-import android.util.Log
-import android.widget.Toast
 import org.pytorch.LiteModuleLoader
-import java.lang.Exception
 
-private val idx2Emoji: Array<Int> = arrayOf(0, 1, 2)
+private val idx2Emoji: Array<Int> = arrayOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 
 private const val TOP_K = 3
 
@@ -50,7 +41,7 @@ class EmojiModeling {
 
                 if (mModule == null) {
                     val moduleFileAbsoluteFilePath = File(
-                        Utils.assetFilePath(context, mModuleAssetName)
+                        Utils.assetFilePath(context, mModuleAssetName, true)
                     ).absolutePath
 
                     val nPixels = Utils.INPUT_TENSOR_WIDTH * Utils.INPUT_TENSOR_HEIGHT

@@ -21,8 +21,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.ImageCapture
 
 
-
-
 class CameraActivity :  AppCompatActivity() {
     protected var mBackgroundThread: HandlerThread? = null
     protected var mBackgroundHandler: Handler? = null

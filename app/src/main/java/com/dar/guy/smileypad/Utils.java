@@ -3,11 +3,13 @@ package com.dar.guy.smileypad;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.media.Image;
 import android.util.Log;
+import org.pytorch.Tensor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -16,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 public class Utils {
@@ -41,13 +44,8 @@ public class Utils {
 
     public static float[] flatImageToFloatArray(Image image) {
         ByteBuffer imgBuffer = image.getPlanes()[0].getBuffer();
-//        int nPixels = imgBuffer.remaining();
         byte[] imgArr = new byte[imgBuffer.remaining()];
         imgBuffer.get(imgArr, 0, imgArr.length);
-//        imgBuffer.reset();
-//        imgBuffer.get(imgArr, nPixels, nPixels);
-//        imgBuffer.reset();
-//        imgBuffer.get(imgArr, 2 * nPixels, nPixels);
 
         return byteArrayToNormalizedImage(imgArr);
     }
@@ -75,26 +73,41 @@ public class Utils {
         return byteArrayToNormalizedImage(imageBytes);
     }
 
+    public static FloatBuffer bitmapToFloatBuffer(Bitmap bitmap){
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+
+        FloatBuffer inTensorBuffer = Tensor
+                .allocateFloatBuffer(3 * width * height);
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                int colour = bitmap.getPixel(x, y);
+                int red = Color.red(colour);
+                int blue = Color.blue(colour);
+                int green = Color.green(colour);
+                inTensorBuffer.put(x + width * y, (float) red);
+                inTensorBuffer.put(width * height + x + width * y, (float) green);
+                inTensorBuffer.put(2 * width * height + x + width * y, (float) blue);
+            }
+        }
+    return inTensorBuffer;
+    }
+
     private static float[] byteArrayToNormalizedImage(byte[] imageBytes) {
         Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
         Bitmap resizedBmp = Bitmap.createScaledBitmap(bmp,
                 INPUT_TENSOR_WIDTH, INPUT_TENSOR_HEIGHT, false);
-        int nPixels = INPUT_TENSOR_WIDTH * INPUT_TENSOR_HEIGHT;
-        ByteBuffer resizedImgBuffer = ByteBuffer.allocate(nPixels * 4);
-        resizedBmp.copyPixelsToBuffer(resizedImgBuffer);
-
-        float[] floatArr = new float[nPixels * 3];
-        for(int i = 0; i < floatArr.length; i++){
-            floatArr[i] = (resizedImgBuffer.get(i) - 127.5F) / 128;
+        FloatBuffer inputBuffer = bitmapToFloatBuffer(resizedBmp);
+        float[] input = new float[inputBuffer.remaining()];
+        for(int i = 0; i < inputBuffer.remaining(); i++){
+            input[i] = (inputBuffer.get(i) - 127.5F) / 128;
         }
-
-        return floatArr;
+        return input;
     }
 
-
-    public static String assetFilePath(Context context, String assetName) {
+    public static String assetFilePath(Context context, String assetName, boolean forceUpdate) {
         File file = new File(context.getFilesDir(), assetName);
-        if (file.exists() && file.length() > 0) {
+        if (!forceUpdate && file.exists() && file.length() > 0) {
             return file.getAbsolutePath();
         }
 

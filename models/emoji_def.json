@@ -1,14 +1,69 @@
 [
-  {
-    "name": "happy",
+  {"name": null,
+    "value": null,
     "samples":
-    ["../../FEC_dataset/images/97056_0.jpg",
-      "../../FEC_dataset/images/97152_0.jpg"]
+    ["../../FEC_dataset/images/2371_0.jpg",
+    "../../FEC_dataset/images/2351_0.jpg",
+    "../../FEC_dataset/images/2312_0.jpg",
+    "../../FEC_dataset/images/2311_0.jpg",
+    "../../FEC_dataset/images/2289_0.jpg",
+    "../../FEC_dataset/images/2278_0.jpg",
+    "../../FEC_dataset/images/2247_0.jpg"
+  ]
   },
   {
-    "name": "sad",
+    "name": "slightly smiling face",
+    "value": "\ud83d\ude42",
     "samples":
-    ["../../FEC_dataset/images/98540_0.jpg"]
+    ["../../FEC_dataset/images/97056_0.jpg",
+      "../../FEC_dataset/images/97152_0.jpg",
+      "../../FEC_dataset/images/985_0.jpg",
+      "../../FEC_dataset/images/986_0.jpg",
+      "../../FEC_dataset/images/401_0.jpg",
+      "../../FEC_dataset/images/12841_0.jpg",
+      "../../FEC_dataset/images/2584_0.jpg"
+    ]
+  },
+  {
+    "name": "slightly frowning face",
+    "value": "\ud83d\ude41",
+    "samples":
+    ["../../FEC_dataset/images/98540_0.jpg",
+      "../../FEC_dataset/images/2536_0.jpg",
+      "../../FEC_dataset/images/11519_0.jpg"
+    ]
+  },
+  {
+    "name": "face savoring food",
+    "description": "tongue sticking face",
+    "value": "\ud83d\ude0b",
+    "samples":
+    ["../../FEC_dataset/images/12080_0.jpg",
+    "../../FEC_dataset/images/12046_0.jpg",
+    "../../FEC_dataset/images/12009_0.jpg",
+    "../../FEC_dataset/images/11983_0.jpg",
+    "../../FEC_dataset/images/11900_0.jpg",
+    "../../FEC_dataset/images/11813_0.jpg"
+]
+  },
+  {
+    "name": "kissing face",
+    "value": "\ud83d\ude17",
+    "samples":
+    ["../../FEC_dataset/images/12047_0.jpg",
+    "../../FEC_dataset/images/11716_0.jpg"]
+  },
+  {
+    "name": "winking face",
+    "value": "\ud83d\ude09",
+    "samples":
+    ["../../FEC_dataset/images/11720_0.jpg"]
+  },
+  {
+    "name": "face with open mouth",
+    "description": "surprise",
+    "value": "\ud83d\ude2e",
+    "samples":
+    ["../../FEC_dataset/images/11588_0.jpg"]
   }
-
 ]
