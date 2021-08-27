@@ -57,13 +57,18 @@ def intermediate_layer_getter(model, layer_name, register_inplace=False):
 
 
 IMG_DIMS = (224, 224)
-def preprocess_img(img_path):
-    img = Image.open(img_path).convert('RGB')
-    img = img.resize(IMG_DIMS)
+def preprocess_img(img, resize=True):
+    if resize:
+        img = img.resize(IMG_DIMS)
     data = (np.array(img) - 127.5) / 128. # the pre-processing method from facenet-pytorch
     data = torch.Tensor(data)
     data = data.permute(2, 0, 1)
     return data
+
+
+def preprocess_img_file(img_path):
+    img = Image.open(img_path).convert('RGB')
+    return preprocess_img(img)
 
 
 class FecDataset(Dataset):
@@ -72,7 +77,7 @@ class FecDataset(Dataset):
         
     def __getitem__(self, idx):
         data = self.data.iloc[idx]
-        img0, img1, img2 = map(preprocess_img, (data['img0'], data['img1'], data['img2']))
+        img0, img1, img2 = map(preprocess_img_file, (data['img0'], data['img1'], data['img2']))
         inputs = torch.stack([img0, img1, img2], dim=0)
         target = data['target']
         triplet_type = data['triplet_type']

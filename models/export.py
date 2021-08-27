@@ -1,4 +1,4 @@
-from train import FecNet, preprocess_img
+from train import FecNet, preprocess_img_file
 import json
 from argparse import ArgumentParser
 import torch
@@ -24,7 +24,7 @@ def add_emoji_classifier(model, emoji_def):
     sample_vectors = []
     with torch.no_grad():
         for img_path in all_samples:
-            sample_vectors.append(model(preprocess_img(img_path).unsqueeze(0)).squeeze(0).detach())
+            sample_vectors.append(model(preprocess_img_file(img_path).unsqueeze(0)).squeeze(0).detach())
         sample_vectors = torch.stack(sample_vectors, dim=1)
         
     class EmojiClassifier(nn.Module):
